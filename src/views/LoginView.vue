@@ -73,29 +73,33 @@ const password = ref("");
 const isLoading = ref(false);
 
 const handleLogin = async () => {
-  isLoading.value = true; // Tampilkan status loading di tombol
+  isLoading.value = true;
   
   try {
     const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+    
     const response = await fetch(`${API_URL}/login`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    email: email.value,
-    password: password.value
-  })
-});
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email.value,
+        password: password.value
+      })
+    });
 
-    const data = await response.json();
+    // Penanganan respons yang aman untuk mencegah SyntaxError jika bukan JSON
+    let data;
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      data = await response.json();
+    } else {
+      throw new Error("Respons dari server bukan JSON yang valid.");
+    }
 
     if (response.ok) {
-      // SUKSES: Panggil fungsi login dari store
-      // (Fungsi login di store.js sudah ada showToast 'Selamat datang', jadi kita tidak perlu panggil lagi disini agar tidak double)
       login(data.token, data.user);
-      
       router.push("/profile");
     } else {
-      // GAGAL: Tampilkan Toast Error
       showToast(data.message || "Login gagal, periksa email/password.", "error");
     }
 
