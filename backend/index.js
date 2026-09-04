@@ -98,7 +98,8 @@ fastify.post('/register', async (request, reply) => {
     });
     return { message: 'Registrasi berhasil', user: { id: user.id, name: user.name } };
   } catch (e) {
-    reply.code(400).send({ message: 'Email sudah terdaftar' });
+    console.error("Error saat registrasi:", e);
+    reply.code(400).send({ message: 'Terjadi kesalahan pada database (atau Email sudah terdaftar). Cek console backend.' });
   }
 });
 
