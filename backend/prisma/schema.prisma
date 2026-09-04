@@ -5,8 +5,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 // --- 1. MODEL USER (Pengguna) ---
@@ -15,8 +15,8 @@ model User {
   email     String   @unique
   password  String
   name      String
-  role      Role     @default(USER)
-  avatar    String?  @db.Text
+  role      String   @default("USER")
+  avatar    String?
   phone     String?
   createdAt DateTime @default(now())
 
@@ -38,9 +38,9 @@ model User {
 model Post {
   id        Int       @id @default(autoincrement())
   title     String
-  content   String    @db.Text
-  image     String?   @db.Text
-  category  String    // Kesehatan, Makanan, dll
+  content   String
+  image     String?
+  category  String
   createdAt DateTime  @default(now())
   
   authorId  Int
@@ -51,7 +51,7 @@ model Post {
 
 model Comment {
   id        Int      @id @default(autoincrement())
-  content   String   @db.Text
+  content   String
   createdAt DateTime @default(now())
 
   postId    Int
@@ -85,13 +85,13 @@ model Like {
 model AdoptionListing {
   id          Int            @id @default(autoincrement())
   name        String
-  description String         @db.Text
+  description String
   race        String?
   age         String?
   gender      String?
   location    String
   image       String?
-  status      AdoptionStatus @default(AVAILABLE)
+  status      String         @default("AVAILABLE")
   createdAt   DateTime       @default(now())
 
   ownerId     Int
@@ -102,8 +102,8 @@ model AdoptionListing {
 
 model AdoptionApplication {
   id          Int               @id @default(autoincrement())
-  message     String            @db.Text
-  status      ApplicationStatus @default(PENDING)
+  message     String
+  status      String            @default("PENDING")
   createdAt   DateTime          @default(now())
 
   listingId   Int
@@ -117,12 +117,12 @@ model AdoptionApplication {
 model LostCatReport {
   id          Int        @id @default(autoincrement())
   name        String
-  description String     @db.Text
+  description String
   location    String
   lastSeen    DateTime?
   contact     String
   image       String?
-  status      LostStatus @default(LOST)
+  status      String     @default("LOST")
   createdAt   DateTime   @default(now())
 
   reporterId  Int
@@ -135,12 +135,12 @@ model Campaign {
   id          Int           @id @default(autoincrement())
   title       String        // Nama Shelter / Judul Kampanye
   slug        String        @unique
-  description String        @db.Text
+  description String
   location    String?       // Alamat (Penting untuk RS/Shelter)
   image       String?
   
   // Tipe: Apakah ini 'SHELTER', 'HOSPITAL', atau 'EVENT' (Kampanye Donasi)
-  type        CampaignType  @default(EVENT) 
+  type        String        @default("EVENT") 
 
   target      Int           @default(0) // Target donasi (0 jika tidak ada target)
   collected   Int           @default(0) // Donasi terkumpul
@@ -163,7 +163,7 @@ model Donation {
   amount        Int
   paymentMethod String
   message       String?
-  proofImage    String?  @db.Text // Bukti Transfer
+  proofImage    String? // Bukti Transfer
   status        String   @default("PENDING")
   createdAt     DateTime @default(now())
 
@@ -178,7 +178,7 @@ model Donation {
 model Article {
   id        Int      @id @default(autoincrement())
   title     String
-  content   String   @db.Text
+  content   String
   image     String?
   source    String?
   createdAt DateTime @default(now())
@@ -191,7 +191,7 @@ model Article {
 model Course {
   id          Int       @id @default(autoincrement())
   title       String
-  description String    @db.Text
+  description String
   level       String    // Pemula, Menengah, Lanjutan
   duration    String
   image       String?
@@ -213,39 +213,10 @@ model Module {
 model Product {
   id          Int      @id @default(autoincrement())
   name        String
-  description String   @db.Text
+  description String
   price       Int
   image       String?
   category    String   // Makanan, Aksesoris, Obat
   stock       Int      @default(10)
   createdAt   DateTime @default(now())
-}
-
-// --- ENUMS ---
-enum Role {
-  USER
-  ADMIN
-}
-
-enum AdoptionStatus {
-  AVAILABLE
-  ADOPTED
-}
-
-enum ApplicationStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-enum LostStatus {
-  LOST
-  FOUND
-}
-
-// BARU: Tipe Kampanye/Institusi
-enum CampaignType {
-  SHELTER   // Shelter Kucing Permanen
-  HOSPITAL  // Rumah Sakit Hewan
-  EVENT     // Penggalangan Dana Sementara
 }
