@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/backend/index.js"
+    }
+  ],
+  "installCommand": "npm install && cd backend && npm install",
+  "buildCommand": "cd backend && npx prisma generate && cd .. && npm run build",
+  "framework": "vite"
+}

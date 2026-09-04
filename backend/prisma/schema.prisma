@@ -1,0 +1,251 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- 1. MODEL USER (Pengguna) ---
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(USER)
+  avatar    String?  @db.Text
+  phone     String?
+  createdAt DateTime @default(now())
+
+  // Relasi
+  posts                Post[]
+  comments             Comment[]
+  likes                Like[]
+  adoptionListings     AdoptionListing[]     @relation("Owner")
+  adoptionApplications AdoptionApplication[]
+  lostCatReports       LostCatReport[]
+  donations            Donation[]
+  articles             Article[]
+  
+  // User juga bisa jadi admin/pemilik dari sebuah Shelter/Campaign
+  managedCampaigns     Campaign[]
+}
+
+// --- 2. MODEL KOMUNITAS (Forum) ---
+model Post {
+  id        Int       @id @default(autoincrement())
+  title     String
+  content   String    @db.Text
+  image     String?   @db.Text
+  category  String    // Kesehatan, Makanan, dll
+  createdAt DateTime  @default(now())
+  
+  authorId  Int
+  author    User      @relation(fields: [authorId], references: [id])
+  comments  Comment[]
+  likes     Like[]
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  authorId  Int
+  author    User     @relation(fields: [authorId], references: [id])
+
+  // Fitur Reply 
+  parentId Int?
+  parent Comment?    @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  children Comment[] @relation("CommentReplies") 
+}
+
+model Like {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+
+  // Mencegah 1 user me-like post yang sama lebih dari sekali
+  @@unique([postId, userId]) 
+}
+
+
+// --- 3. MODEL ADOPSI ---
+model AdoptionListing {
+  id          Int            @id @default(autoincrement())
+  name        String
+  description String         @db.Text
+  race        String?
+  age         String?
+  gender      String?
+  location    String
+  image       String?
+  status      AdoptionStatus @default(AVAILABLE)
+  createdAt   DateTime       @default(now())
+
+  ownerId     Int
+  owner       User           @relation("Owner", fields: [ownerId], references: [id])
+  
+  applicants  AdoptionApplication[]
+}
+
+model AdoptionApplication {
+  id          Int               @id @default(autoincrement())
+  message     String            @db.Text
+  status      ApplicationStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+
+  listingId   Int
+  listing     AdoptionListing   @relation(fields: [listingId], references: [id])
+  
+  applicantId Int
+  applicant   User              @relation(fields: [applicantId], references: [id])
+}
+
+// --- 4. MODEL KUCING HILANG ---
+model LostCatReport {
+  id          Int        @id @default(autoincrement())
+  name        String
+  description String     @db.Text
+  location    String
+  lastSeen    DateTime?
+  contact     String
+  image       String?
+  status      LostStatus @default(LOST)
+  createdAt   DateTime   @default(now())
+
+  reporterId  Int
+  reporter    User       @relation(fields: [reporterId], references: [id])
+}
+
+// --- 5. MODEL SHELTER, RS, & CAMPAIGN ---
+// Ini adalah tabel gabungan untuk Rumah Sakit, Shelter, dan Kampanye Donasi
+model Campaign {
+  id          Int           @id @default(autoincrement())
+  title       String        // Nama Shelter / Judul Kampanye
+  slug        String        @unique
+  description String        @db.Text
+  location    String?       // Alamat (Penting untuk RS/Shelter)
+  image       String?
+  
+  // Tipe: Apakah ini 'SHELTER', 'HOSPITAL', atau 'EVENT' (Kampanye Donasi)
+  type        CampaignType  @default(EVENT) 
+
+  target      Int           @default(0) // Target donasi (0 jika tidak ada target)
+  collected   Int           @default(0) // Donasi terkumpul
+  deadline    DateTime?     // Batas waktu (opsional untuk Shelter permanen)
+  verified    Boolean       @default(false)
+  
+  contact     String?       // No HP / Email Shelter
+  createdAt   DateTime      @default(now())
+
+  // Relasi: Siapa admin/pengelola shelter ini?
+  managerId   Int?
+  manager     User?         @relation(fields: [managerId], references: [id])
+
+  donations   Donation[]
+}
+
+// --- 6. MODEL DONASI ---
+model Donation {
+  id            Int      @id @default(autoincrement())
+  amount        Int
+  paymentMethod String
+  message       String?
+  proofImage    String?  @db.Text // Bukti Transfer
+  status        String   @default("PENDING")
+  createdAt     DateTime @default(now())
+
+  donorId       Int?
+  donor         User?    @relation(fields: [donorId], references: [id])
+  
+  campaignId    Int
+  campaign      Campaign @relation(fields: [campaignId], references: [id])
+}
+
+// --- 7. MODEL ARTIKEL ---
+model Article {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String   @db.Text
+  image     String?
+  source    String?
+  createdAt DateTime @default(now())
+  
+  authorId  Int?
+  author    User?    @relation(fields: [authorId], references: [id])
+}
+
+// --- 8. MODEL KELAS ONLINE (Course & Modules) ---
+model Course {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String    @db.Text
+  level       String    // Pemula, Menengah, Lanjutan
+  duration    String
+  image       String?
+  createdAt   DateTime  @default(now())
+
+  modules     Module[]
+}
+
+model Module {
+  id        Int      @id @default(autoincrement())
+  title     String
+  videoId   String   // ID Video Youtube (misal: dQw4w9WgXcQ)
+  
+  courseId  Int
+  course    Course   @relation(fields: [courseId], references: [id])
+}
+
+// --- 9. E-COMMERCE (Fase 1) ---
+model Product {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String   @db.Text
+  price       Int
+  image       String?
+  category    String   // Makanan, Aksesoris, Obat
+  stock       Int      @default(10)
+  createdAt   DateTime @default(now())
+}
+
+// --- ENUMS ---
+enum Role {
+  USER
+  ADMIN
+}
+
+enum AdoptionStatus {
+  AVAILABLE
+  ADOPTED
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LostStatus {
+  LOST
+  FOUND
+}
+
+// BARU: Tipe Kampanye/Institusi
+enum CampaignType {
+  SHELTER   // Shelter Kucing Permanen
+  HOSPITAL  // Rumah Sakit Hewan
+  EVENT     // Penggalangan Dana Sementara
+}
